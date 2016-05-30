@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 import os.path
 from base64 import b16encode
 import time
+import argparse
 
 
 def download_reddit_url(url):
@@ -45,3 +46,16 @@ class Crawler(object):
             current_page_url = next_page_url
             time.sleep(2)
             print  next_page_url
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Crawl /r/learnprogramming')
+    parser.add_argument('--start_url', dest='start_url')
+    parser.add_argument('--storage_dir', dest='storage_dir')
+    args = parser.parse_args()
+    print args.start_url, args.storage_dir
+    crawler = Crawler(args.start_url, args.storage_dir)
+    crawler.crawl()
+
+if __name__ == "__main__":
+    main()

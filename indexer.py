@@ -16,6 +16,7 @@ class Indexer(object):
         self.doc_count += 1
         assert url not in self.url_to_id
         current_id = self.doc_count
+        self.url_to_id[url] = current_id
         self.forward_index[current_id] = parsed_text
         for position, word in enumerate(parsed_text):
             if word != '':
@@ -24,18 +25,31 @@ class Indexer(object):
                 self.inverted_index[word].append((position, current_id))
 
     def store_on_disk(self, index_dir):
-        inverted_index_file_name = os.path.join(index_dir, 'inverted_index')
-        forward_index_file_name = os.path.join(index_dir, 'forward_index')
-        url_to_id_file_name = os.path.join(index_dir, 'url_to_id')
 
-        inverted_index_file = open(inverted_index_file_name, 'w')
-        forward_index_file = open(forward_index_file_name, 'w')
-        url_to_id_file = open(url_to_id_file_name, 'w')
+        def dump_json_to_file(source, file_name):
+            file_path = os.path.join(index_dir, file_name)
+            json.dump(source, open(file_path, 'w'), indent=4)
 
-        json.dump(self.inverted_index, inverted_index_file, indent=4)
-        json.dump(self.forward_index, forward_index_file, indent=4)
-        json.dump(self.url_to_id, url_to_id_file, indent=4)
+        dump_json_to_file(self.inverted_index, 'inverted_index')
+        dump_json_to_file(self.forward_index, 'forward_index')
+        dump_json_to_file(self.url_to_id, 'url_to_id')
 
+class Searcher(object):
+    def __init__(self, index_dir):
+        self.inverted_index = dict()
+        self.forward_index = dict()
+        self.url_to_id = dict()
+
+        def load_json_from_file(file_name):
+            file_path = os.path.join(index_dir, file_name)
+            return json.load(open(file_path))
+
+        self.inverted_index = load_json_from_file('inverted_index')
+        self.forward_index = load_json_from_file('forward_index')
+        self.url_to_id = load_json_from_file('url_to_id')
+
+    def find_documents(self, words):
+        return sum([self.inverted_index[word] for word in words], [])
 
 def create_index_from_dir(stored_documents_dir, index_dir):
     indexer = Indexer()
@@ -51,8 +65,8 @@ def create_index_from_dir(stored_documents_dir, index_dir):
 
 def main():
     parser = argparse.ArgumentParser(description='Index /r/learnprogramming')
-    parser.add_argument('--stored_documents_dir', dest='stored_documents_dir')
-    parser.add_argument('--index_dir', dest='index_dir')
+    parser.add_argument('--stored_documents_dir', dest='stored_documents_dir', required=True)
+    parser.add_argument('--index_dir', dest='index_dir', required=True)
     args = parser.parse_args()
     create_index_from_dir(args.stored_documents_dir, args.index_dir)
 
